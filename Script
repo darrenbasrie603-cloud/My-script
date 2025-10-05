@@ -1,0 +1,246 @@
+local scriptString = [[
+    local Players = game:GetService("Players")
+    local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+
+    local flying = false
+    local flySpeed = 50
+    local velocity = Instance.new("BodyVelocity")
+    velocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    velocity.Velocity = Vector3.new(0, 0, 0)
+    velocity.Parent = rootPart
+
+    local moveForward = false
+    local moveBackward = false
+    local moveLeft = false
+    local moveRight = false
+    local moveUp = false
+    local moveDown = false
+
+    local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+    screenGui.Name = "FlyHighlightUI"
+
+    local frame = Instance.new("Frame", screenGui)
+    frame.Size = UDim2.new(0, 260, 0, 230)
+    frame.Position = UDim2.new(0, 20, 0, 20)
+    frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    frame.BorderSizePixel = 0
+    frame.Active = true
+    frame.Draggable = true
+
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundTransparency = 1
+    title.Text = "Fly, Highlight & Controls"
+    title.TextColor3 = Color3.new(1,1,1)
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 22
+
+    local flyButton = Instance.new("TextButton", frame)
+    flyButton.Size = UDim2.new(0.9, 0, 0, 40)
+    flyButton.Position = UDim2.new(0.05, 0, 0, 40)
+    flyButton.Text = "Toggle Fly (F)"
+    flyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    flyButton.TextColor3 = Color3.new(1,1,1)
+    flyButton.Font = Enum.Font.SourceSans
+    flyButton.TextSize = 18
+
+    local speedLabel = Instance.new("TextLabel", frame)
+    speedLabel.Size = UDim2.new(0.9, 0, 0, 20)
+    speedLabel.Position = UDim2.new(0.05, 0, 0, 85)
+    speedLabel.Text = "Fly Speed: 50"
+    speedLabel.BackgroundTransparency = 1
+    speedLabel.TextColor3 = Color3.new(1,1,1)
+    speedLabel.Font = Enum.Font.SourceSans
+    speedLabel.TextSize = 16
+
+    local speedUp = Instance.new("TextButton", frame)
+    speedUp.Size = UDim2.new(0.4, 0, 0, 25)
+    speedUp.Position = UDim2.new(0.05, 0, 0, 110)
+    speedUp.Text = "Speed +10"
+    speedUp.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+    speedUp.TextColor3 = Color3.new(1,1,1)
+    speedUp.Font = Enum.Font.SourceSans
+    speedUp.TextSize = 14
+
+    local speedDown = Instance.new("TextButton", frame)
+    speedDown.Size = UDim2.new(0.4, 0, 0, 25)
+    speedDown.Position = UDim2.new(0.55, 0, 0, 110)
+    speedDown.Text = "Speed -10"
+    speedDown.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
+    speedDown.TextColor3 = Color3.new(1,1,1)
+    speedDown.Font = Enum.Font.SourceSans
+    speedDown.TextSize = 14
+
+    local highlightButton = Instance.new("TextButton", frame)
+    highlightButton.Size = UDim2.new(0.9, 0, 0, 35)
+    highlightButton.Position = UDim2.new(0.05, 0, 0, 140)
+    highlightButton.Text = "Toggle Highlight Players"
+    highlightButton.BackgroundColor3 = Color3.fromRGB(180, 130, 70)
+    highlightButton.TextColor3 = Color3.new(1,1,1)
+    highlightButton.Font = Enum.Font.SourceSans
+    highlightButton.TextSize = 18
+
+    local controlsFrame = Instance.new("Frame", frame)
+    controlsFrame.Size = UDim2.new(0.9, 0, 0, 70)
+    controlsFrame.Position = UDim2.new(0.05, 0, 0, 180)
+    controlsFrame.BackgroundTransparency = 0.3
+    controlsFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    controlsFrame.BorderSizePixel = 0
+
+    local function createControlButton(text, pos)
+        local btn = Instance.new("TextButton", controlsFrame)
+        btn.Size = UDim2.new(0, 50, 0, 50)
+        btn.Position = pos
+        btn.Text = text
+        btn.BackgroundColor3 = Color3.fromRGB(100, 100, 200)
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.SourceSansBold
+        btn.TextSize = 18
+        return btn
+    end
+
+    local btnW = createControlButton("W", UDim2.new(0.45, 0, 0, 0))
+    local btnA = createControlButton("A", UDim2.new(0.15, 0, 0.6, 0))
+    local btnS = createControlButton("S", UDim2.new(0.45, 0, 0.6, 0))
+    local btnD = createControlButton("D", UDim2.new(0.75, 0, 0.6, 0))
+    local btnSpc = createControlButton("Space", UDim2.new(0.15, 0, 0, 0))
+    btnSpc.Size = UDim2.new(0, 100, 0, 50)
+    local btnCtrl = createControlButton("Ctrl", UDim2.new(0.75, 0, 0, 0))
+    btnCtrl.Size = UDim2.new(0, 100, 0, 50)
+
+    local moveForward = false
+    local moveBackward = false
+    local moveLeft = false
+    local moveRight = false
+    local moveUp = false
+    local moveDown = false
+
+    local function setupButton(btn, variableName)
+        btn.MouseButton1Down:Connect(function()
+            _G[variableName] = true
+        end)
+        btn.MouseButton1Up:Connect(function()
+            _G[variableName] = false
+        end)
+        btn.TouchLongPress:Connect(function()
+            _G[variableName] = true
+        end)
+        btn.TouchTap:Connect(function()
+            _G[variableName] = false
+        end)
+    end
+
+    setupButton(btnW, "moveForward")
+    setupButton(btnA, "moveLeft")
+    setupButton(btnS, "moveBackward")
+    setupButton(btnD, "moveRight")
+    setupButton(btnSpc, "moveUp")
+    setupButton(btnCtrl, "moveDown")
+
+    local function toggleFly()
+        flying = not flying
+        if flying then
+            velocity.Parent = rootPart
+        else
+            velocity.Velocity = Vector3.new(0, 0, 0)
+            velocity.Parent = nil
+        end
+    end
+
+    flyButton.MouseButton1Click:Connect(toggleFly)
+
+    speedUp.MouseButton1Click:Connect(function()
+        flySpeed = flySpeed + 10
+        speedLabel.Text = "Fly Speed: ".. flySpeed
+    end)
+
+    speedDown.MouseButton1Click:Connect(function()
+        flySpeed = math.max(10, flySpeed -10)
+        speedLabel.Text = "Fly Speed: ".. flySpeed
+    end)
+
+    local highlighting = false
+    local highlights = {}
+
+    local function removeAllHighlights()
+        for _, h in pairs(highlights) do
+            if h then
+                h:Destroy()
+            end
+        end
+        highlights = {}
+    end
+
+    local function toggleHighlight()
+        highlighting = not highlighting
+        if highlighting then
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                    local h = plr.Character:FindFirstChildOfClass("Highlight")
+                    if not h then
+                        h = Instance.new("Highlight")
+                        h.FillColor = Color3.new(1,0,0)
+                        h.OutlineColor = Color3.new(1,1,1)
+                        h.Adornee = plr.Character
+                        h.Parent = plr.Character
+                        table.insert(highlights, h)
+                    else
+                        table.insert(highlights, h)
+                    end
+                end
+            end
+        else
+            removeAllHighlights()
+        end
+    end
+
+    highlightButton.MouseButton1Click:Connect(toggleHighlight)
+
+    RunService.Heartbeat:Connect(function()
+        if flying then
+            local moveDirection = Vector3.new(0,0,0)
+            local cam = workspace.CurrentCamera
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) or moveForward then
+                moveDirection = moveDirection + cam.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) or moveBackward then
+                moveDirection = moveDirection - cam.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) or moveLeft then
+                moveDirection = moveDirection - cam.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) or moveRight then
+                moveDirection = moveDirection + cam.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) or moveUp then
+                moveDirection = moveDirection + Vector3.new(0,1,0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or moveDown then
+                moveDirection = moveDirection - Vector3.new(0,1,0)
+            end
+
+            if moveDirection.Magnitude > 0 then
+                velocity.Velocity = moveDirection.Unit * flySpeed
+            else
+                velocity.Velocity = Vector3.new(0,0,0)
+            end
+        end
+    end)
+
+    Players.PlayerAdded:Connect(function(plr)
+        if highlighting then
+            plr.CharacterAdded:Connect(function()
+                wait(1)
+                toggleHighlight()
+                toggleHighlight()
+            end)
+        end
+    end)
+]]
+
+loadstring(scriptString)()
